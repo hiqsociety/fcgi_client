@@ -379,7 +379,7 @@ func (e *badStringError) Error() string { return fmt.Sprintf("%s %q", e.what, e.
 
 // Request returns a HTTP Response with Header and Body
 // from fcgi responder
-func (this *FCGIClient) Request(p map[string]string, req io.Reader) (resp *http.Response, err error) {
+func (this *FCGIClient) Request(p map[string]string, req io.Reader) (resp *fasthttp.Response, err error) {
 
 	r, err := this.Do(p, req)
 	if err != nil {
@@ -388,7 +388,7 @@ func (this *FCGIClient) Request(p map[string]string, req io.Reader) (resp *http.
 
 	rb := bufio.NewReader(r)
 	tp := textproto.NewReader(rb)
-	resp = new(http.Response)
+	resp = new(fasthttp.Response)
 	// Parse the first line of the response.
 	line, err := tp.ReadLine()
 	if err != nil {
@@ -415,7 +415,7 @@ func (this *FCGIClient) Request(p map[string]string, req io.Reader) (resp *http.
 		err = &badStringError{"malformed HTTP status code", statusCode}
 	}
 	var ok bool
-	if resp.ProtoMajor, resp.ProtoMinor, ok = http.ParseHTTPVersion(resp.Proto); !ok {
+	if resp.ProtoMajor, resp.ProtoMinor, ok = fasthttp.ParseHTTPVersion(resp.Proto); !ok {
 		err = &badStringError{"malformed HTTP version", resp.Proto}
 	}
 	// Parse the response headers.
@@ -426,7 +426,7 @@ func (this *FCGIClient) Request(p map[string]string, req io.Reader) (resp *http.
 		}
 		return nil, err
 	}
-	resp.Header = http.Header(mimeHeader)
+	resp.Header = fasthttp.Header(mimeHeader)
 	// TODO: fixTransferEncoding ?
 	resp.TransferEncoding = resp.Header["Transfer-Encoding"]
 	resp.ContentLength, _ = strconv.ParseInt(resp.Header.Get("Content-Length"), 10, 64)
@@ -440,7 +440,7 @@ func (this *FCGIClient) Request(p map[string]string, req io.Reader) (resp *http.
 }
 
 // Get issues a GET request to the fcgi responder.
-func (this *FCGIClient) Get(p map[string]string) (resp *http.Response, err error) {
+func (this *FCGIClient) Get(p map[string]string) (resp *fasthttp.Response, err error) {
 
 	p["REQUEST_METHOD"] = "GET"
 	p["CONTENT_LENGTH"] = "0"
@@ -450,7 +450,7 @@ func (this *FCGIClient) Get(p map[string]string) (resp *http.Response, err error
 
 // Get issues a Post request to the fcgi responder. with request body
 // in the format that bodyType specified
-func (this *FCGIClient) Post(p map[string]string, bodyType string, body io.Reader, l int) (resp *http.Response, err error) {
+func (this *FCGIClient) Post(p map[string]string, bodyType string, body io.Reader, l int) (resp *fasthttp.Response, err error) {
 
 	if len(p["REQUEST_METHOD"]) == 0 || p["REQUEST_METHOD"] == "GET" {
 		p["REQUEST_METHOD"] = "POST"
@@ -467,7 +467,7 @@ func (this *FCGIClient) Post(p map[string]string, bodyType string, body io.Reade
 
 // PostForm issues a POST to the fcgi responder, with form
 // as a string key to a list values (url.Values)
-func (this *FCGIClient) PostForm(p map[string]string, data url.Values) (resp *http.Response, err error) {
+func (this *FCGIClient) PostForm(p map[string]string, data url.Values) (resp *fasthttp.Response, err error) {
 	body := bytes.NewReader([]byte(data.Encode()))
 	return this.Post(p, "application/x-www-form-urlencoded", body, body.Len())
 }
@@ -475,7 +475,7 @@ func (this *FCGIClient) PostForm(p map[string]string, data url.Values) (resp *ht
 // PostFile issues a POST to the fcgi responder in multipart(RFC 2046) standard,
 // with form as a string key to a list values (url.Values),
 // and/or with file as a string key to a list file path.
-func (this *FCGIClient) PostFile(p map[string]string, data url.Values, file map[string]string) (resp *http.Response, err error) {
+func (this *FCGIClient) PostFile(p map[string]string, data url.Values, file map[string]string) (resp *fasthttp.Response, err error) {
 	buf := &bytes.Buffer{}
 	writer := multipart.NewWriter(buf)
 	bodyType := writer.FormDataContentType()
